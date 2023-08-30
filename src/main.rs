@@ -31,6 +31,23 @@ lazy_static! {
     ];
 }
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+pub enum SignificanceLevel {
+    Adot1,
+    Adot05,
+    Adot01,
+}
+
+impl SignificanceLevel {
+    fn value(&self) -> f64 {
+        match self {
+            Self::Adot1 => 1.21,
+            Self::Adot05 => 1.330,
+            Self::Adot01 => 1.569,
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 struct DigitCount {
     total: usize,
@@ -79,6 +96,7 @@ impl DigitCount {
         ]
     }
     fn score(&self) -> f64 {
+        // Based on this https://en.wikipedia.org/wiki/Benford's_law#Statistical_tests
         let distribution = self.distribution();
         let diff = vec![
             (distribution[0] - TARGET_DIST[0]).powi(2),
@@ -94,8 +112,8 @@ impl DigitCount {
         ((self.total as f64) * diff.iter().sum::<f64>()).sqrt()
     }
 
-    fn pass(&self) -> bool {
-        self.score() < 1.0
+    fn pass(&self, significance: SignificanceLevel) -> bool {
+        self.score() < significance.value()
     }
 }
 impl ops::Add<DigitCount> for DigitCount {
@@ -133,6 +151,9 @@ fn get_counts(file: PathBuf) -> Result<DigitCount, std::io::Error> {
 struct Args {
     /// csv to verify
     file: PathBuf,
+    /// significance
+    #[arg(value_enum, long, default_value_t = SignificanceLevel::Adot01)]
+    signficance: SignificanceLevel,
 }
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
@@ -160,7 +181,7 @@ fn main() -> std::io::Result<()> {
     );
 
     dbg!(counts.score());
-    if counts.pass() {
+    if counts.pass(args.signficance) {
         println!("✅ PASS!!")
     } else {
         println!("❌ FAIL!!")
@@ -174,11 +195,11 @@ mod tests {
     #[test]
     fn test_fail() {
         let dc = get_counts(PathBuf::from("./data/random.txt")).unwrap();
-        assert!(!dc.pass());
+        assert!(!dc.pass(SignificanceLevel::Adot01));
     }
     #[test]
     fn test_pass() {
         let dc = get_counts(PathBuf::from("./data/poweroftwo.txt")).unwrap();
-        assert!(dc.pass());
+        assert!(dc.pass(SignificanceLevel::Adot01));
     }
 }
