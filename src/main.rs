@@ -33,24 +33,24 @@ lazy_static! {
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum SignificanceLevel {
-    Adot1,
-    Adot05,
-    Adot01,
+    Low,
+    Medium,
+    High,
 }
 
 impl SignificanceLevel {
     fn value(&self) -> f64 {
         match self {
-            Self::Adot1 => 1.21,
-            Self::Adot05 => 1.330,
-            Self::Adot01 => 1.569,
+            Self::Low => 1.21,
+            Self::Medium => 1.330,
+            Self::High => 1.569,
         }
     }
     fn perc(&self) -> f64 {
         match self {
-            Self::Adot1 => 0.1,
-            Self::Adot05 => 0.05,
-            Self::Adot01 => 0.01,
+            Self::Low => 0.1,
+            Self::Medium => 0.05,
+            Self::High => 0.01,
         }
     }
 }
@@ -156,10 +156,10 @@ fn get_counts(file: PathBuf) -> Result<DigitCount, std::io::Error> {
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// csv to verify
+    /// path to data file. 1 numerical value per line.
     file: PathBuf,
     /// significance
-    #[arg(value_enum, long, default_value_t = SignificanceLevel::Adot05)]
+    #[arg(value_enum,short, long, default_value_t = SignificanceLevel::Medium)]
     signficance: SignificanceLevel,
 }
 fn main() -> std::io::Result<()> {
@@ -190,9 +190,9 @@ fn main() -> std::io::Result<()> {
     println!("\nSignificance level: {}", args.signficance.perc());
     println!("Found distance score: {}\n", counts.score());
     if counts.pass(args.signficance) {
-        println!("✅ PASS!! data set seems to be natural!")
+        println!("✅ PASS!! data seems to be natural!")
     } else {
-        println!("❌ FAIL!! data set seems to be tampered with!")
+        println!("❌ FAIL!! data seems to be tampered with!")
     }
 
     println!("\nwarning: Make sure the category of data your testing follows Benford's law.");
@@ -206,11 +206,11 @@ mod tests {
     #[test]
     fn test_fail() {
         let dc = get_counts(PathBuf::from("./data/random.txt")).unwrap();
-        assert!(!dc.pass(SignificanceLevel::Adot01));
+        assert!(!dc.pass(SignificanceLevel::High));
     }
     #[test]
     fn test_pass() {
         let dc = get_counts(PathBuf::from("./data/poweroftwo.txt")).unwrap();
-        assert!(dc.pass(SignificanceLevel::Adot01));
+        assert!(dc.pass(SignificanceLevel::High));
     }
 }
