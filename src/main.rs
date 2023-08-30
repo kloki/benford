@@ -46,6 +46,13 @@ impl SignificanceLevel {
             Self::Adot01 => 1.569,
         }
     }
+    fn perc(&self) -> f64 {
+        match self {
+            Self::Adot1 => 0.1,
+            Self::Adot05 => 0.05,
+            Self::Adot01 => 0.01,
+        }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -152,7 +159,7 @@ struct Args {
     /// csv to verify
     file: PathBuf,
     /// significance
-    #[arg(value_enum, long, default_value_t = SignificanceLevel::Adot01)]
+    #[arg(value_enum, long, default_value_t = SignificanceLevel::Adot05)]
     signficance: SignificanceLevel,
 }
 fn main() -> std::io::Result<()> {
@@ -160,7 +167,7 @@ fn main() -> std::io::Result<()> {
     let counts = get_counts(args.file)?;
     let dist = counts.distribution();
 
-    println!("Leading digit distribution");
+    println!("Leading digit distribution\n");
     println!("      |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9");
     println!(
         "TARGET|{:.3}|{:.3}|{:.3}|{:.3}|{:.3}|{:.3}|{:.3}|{:.3}|{:.3}",
@@ -180,12 +187,16 @@ fn main() -> std::io::Result<()> {
         dist[0], dist[1], dist[2], dist[3], dist[4], dist[5], dist[6], dist[7], dist[8]
     );
 
-    dbg!(counts.score());
+    println!("\nSignificance level: {}", args.signficance.perc());
+    println!("Found distance score: {}\n", counts.score());
     if counts.pass(args.signficance) {
-        println!("✅ PASS!!")
+        println!("✅ PASS!! data set seems to be natural!")
     } else {
-        println!("❌ FAIL!!")
+        println!("❌ FAIL!! data set seems to be tampered with!")
     }
+
+    println!("\nwarning: Make sure the category of data your testing follows Benford's law.");
+    println!("https://en.wikipedia.org/wiki/Benford's_law");
     Ok(())
 }
 
